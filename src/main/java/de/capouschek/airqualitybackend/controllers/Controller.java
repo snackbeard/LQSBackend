@@ -1,11 +1,11 @@
 package de.capouschek.airqualitybackend.controllers;
 
 import de.capouschek.airqualitybackend.classes.QualityObject;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import de.capouschek.airqualitybackend.classes.User;
+import de.capouschek.airqualitybackend.exceptions.*;
+import de.capouschek.airqualitybackend.infrastructure.DBService;
+import org.springframework.web.bind.annotation.*;
 
-import javax.websocket.server.PathParam;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -15,11 +15,40 @@ import java.util.Random;
 @RestController
 public class Controller {
 
+    public Controller() {
+        System.out.println("controller constructor");
+        try {
+            service = new DBService("jdbc:mariadb://192.168.178.99:3306/lqs", "dbuser", "password");
+        } catch (ServiceInitializationException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    private DBService service;
+
     private int countTvocs = 1;
     private int countEco2 = 1;
 
     private List<QualityObject> tvocs = new ArrayList<>();
     private List<QualityObject> eco2 = new ArrayList<>();
+
+    @PostMapping(value = "/user")
+    public User addUser(@RequestBody User user) throws StoreException, DuplicateException {
+
+        user.store(service.getConnection());
+
+        return user;
+
+    }
+
+    @PostMapping(value = "/user.login")
+    public User login(@RequestBody User user) throws LoginFailedException, FetchException {
+
+        user.login(service.getConnection());
+
+        return user;
+
+    }
 
     @GetMapping("/gettvocs.{backwards}")
     // TODO: später dann überprüfen, ob es lower/upper überhaupt schon gibt und entsprechend daten zurückgeben
