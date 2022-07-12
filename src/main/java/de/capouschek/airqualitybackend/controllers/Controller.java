@@ -15,6 +15,8 @@ import java.util.Random;
 @RestController
 public class Controller {
 
+    // https://www.codejava.net/frameworks/spring-boot/form-authentication-with-jdbc-and-mysql
+
     public Controller() {
         System.out.println("controller constructor");
         try {
@@ -52,7 +54,7 @@ public class Controller {
 
     @GetMapping("/gettvocs.{backwards}")
     // TODO: später dann überprüfen, ob es lower/upper überhaupt schon gibt und entsprechend daten zurückgeben
-    public List<QualityObject> getRandomObjects(@PathVariable int backwards) {
+    public List<QualityObject> getTvocs(@PathVariable int backwards) {
 
         if (tvocs.isEmpty()) {
             tvocs = generateValues(96, 100, 110);
@@ -65,8 +67,9 @@ public class Controller {
             finalList.add(tvocs.get(i));
         }
 
-        this.countTvocs++;
+        
         System.out.println("retrived tvocs back to " + (tvocs.size() -backwards) + ": " + countTvocs);
+        this.countTvocs++;
 
         Collections.reverse(finalList);
 
