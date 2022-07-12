@@ -16,9 +16,23 @@ public class User {
     private String name;
     private String password;
 
-    public void store(Connection connection) throws StoreException, DuplicateException {
 
-        List<User> userList = new ArrayList<>();
+    public User(String name, String password) {
+        if (name == null || name.equals("") || !(name.trim().equals(name))) {
+            throw new AssertionError("Ungültiger Name!");
+        }
+
+        this.name = name;
+
+        if (password == null || password.equals("")) {
+            throw new AssertionError("Passwort darf nicht leer sein!");
+        }
+
+        this.password = password;
+    }
+
+    public void register(Connection connection) throws StoreException, DuplicateException {
+
         String getUserSql = "SELECT * FROM User where name = ?";
 
         try {
@@ -78,18 +92,47 @@ public class User {
         }
     }
 
-    public User(String name, String password) {
-        if (name == null || name.equals("") || !(name.trim().equals(name))) {
-            throw new AssertionError("name doesn't match expected pattern!");
+    public static boolean subscribeToController(Connection connection, long userId, long controllerId) throws StoreException, DuplicateException {
+
+        String sqlGet = "SELECT * FROM User_Controller WHERE userId = ? AND controllerId = ?";
+        String sql = "INSERT INTO User_Controller (userId, controllerId) VALUES (?, ?)";
+
+        try {
+            PreparedStatement prepGet = connection.prepareStatement(sqlGet);
+            prepGet.setLong(1, userId);
+            prepGet.setLong(2, controllerId);
+            ResultSet resultSetGet = prepGet.executeQuery();
+            while (resultSetGet.next()) {
+                throw new DuplicateException("Already subscribed to this controller!");
+            }
+
+            PreparedStatement prep = connection.prepareStatement(sql);
+            prep.setLong(1, userId);
+            prep.setLong(2, controllerId);
+            prep.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new StoreException("Fehler beim Subscriben!");
         }
 
-        this.name = name;
+        return true;
 
-        if (password == null || password.equals("")) {
-            throw new AssertionError("password can't be null!");
+    }
+
+    public static boolean unsubscribeFromController(Connection connection, long userId, long controllerId) throws StoreException {
+        String sql = "DELETE FROM User_Controller WHERE userId = ? AND controllerId = ?";
+
+        try {
+            PreparedStatement prep = connection.prepareStatement(sql);
+            prep.setLong(1, userId);
+            prep.setLong(2, controllerId);
+            prep.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new StoreException("Fehler beim unsubscriben!");
         }
 
-        this.password = password;
+        return true;
     }
 
     public long getObjectId() {
