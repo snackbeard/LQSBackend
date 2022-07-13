@@ -1,33 +1,21 @@
 package de.capouschek.airqualitybackend.controllers;
 
-import de.capouschek.airqualitybackend.classes.ControllerEsp;
-import de.capouschek.airqualitybackend.classes.ControllerSubscription;
-import de.capouschek.airqualitybackend.classes.QualityObject;
-import de.capouschek.airqualitybackend.classes.User;
+import de.capouschek.airqualitybackend.classes.*;
 import de.capouschek.airqualitybackend.exceptions.*;
 import de.capouschek.airqualitybackend.infrastructure.DBService;
 import org.springframework.web.bind.annotation.*;
 
 import javax.websocket.server.PathParam;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 @RestController
 public class Controller {
 
     // https://www.codejava.net/frameworks/spring-boot/form-authentication-with-jdbc-and-mysql
-
-    public Controller() {
-        System.out.println("controller constructor");
-        try {
-            service = new DBService("jdbc:mariadb://192.168.178.99:3306/lqs", "dbuser", "password");
-        } catch (ServiceInitializationException e) {
-            System.out.println(e.getMessage());
-        }
-    }
 
     private DBService service;
 
@@ -36,6 +24,41 @@ public class Controller {
 
     private List<QualityObject> tvocs = new ArrayList<>();
     private List<QualityObject> eco2 = new ArrayList<>();
+
+    private Map<Long, ControllerData> controllerDataMap = new HashMap<>();
+
+    public Controller() throws FetchException {
+        System.out.println("controller constructor");
+        try {
+            // create service instance
+            service = new DBService("jdbc:mariadb://192.168.178.99:3306/lqs", "dbuser", "password");
+        } catch (ServiceInitializationException e) {
+            System.out.println(e.getMessage());
+        }
+
+        try {
+            // fetch all controllers with names, objectId and add them to the Map
+            String sql = "SELECT ID, name FROM Controller";
+            PreparedStatement prep = this.service.getConnection().prepareStatement(sql);
+            ResultSet resultSet = prep.executeQuery();
+            while (resultSet.next()) {
+
+                long id = resultSet.getLong(1);
+
+                this.controllerDataMap
+                        .put(id, new ControllerData(resultSet.getString(2)));
+
+                // TODO: remove fake Data
+                this.controllerDataMap.get(id).setDataEco2(generateValues(96, 200, 210));
+                this.controllerDataMap.get(id).setDataTvoc(generateValues(96, 100, 110));
+
+
+            }
+
+        } catch (SQLException e) {
+            throw new FetchException("Failed to initiate Controllers!");
+        }
+    }
 
     /**
      * Add User to Database.
@@ -69,7 +92,58 @@ public class Controller {
 
     }
 
+    /**
+     * Get data of controllers subscribed by user.
+     * @param userId Id of the requesting user.
+     * @param eco2b Old values from eco2.
+     * @param tvocsb Old values from tvoc.
+     * @return List of the controllers with the values.
+     * @throws FetchException
+     */
+    @GetMapping(value = "/user.{userId}.fetchData.{eco2b}.{tvocsb}")
+    public List<ControllerData> fetchData(@PathVariable long userId, @PathVariable int eco2b, @PathVariable int tvocsb) throws FetchException {
 
+        List<ControllerData> data = new ArrayList<>();
+
+        List<Long> subscribedControllerIds = ControllerEsp.getSubscribed(this.service.getConnection(), userId);
+
+        for (Long subscribedControllerId : subscribedControllerIds) {
+
+            ControllerData controllerData = this.controllerDataMap.get(subscribedControllerId);
+            List<QualityObject> finalDataTvco = new ArrayList<>();
+            List<QualityObject> finalDataEco2 = new ArrayList<>();
+
+            for (int i = controllerData.getDataTvoc().size() - 1; i > controllerData.getDataTvoc().size() - 1 - tvocsb; i--) {
+                finalDataTvco.add(controllerData.getDataTvoc().get(i));
+            }
+
+            Collections.reverse(finalDataTvco);
+            controllerData.setDataTvoc(finalDataTvco);
+
+            for (int i = controllerData.getDataEco2().size() - 1; i > controllerData.getDataEco2().size() - 1 - eco2b; i--) {
+                finalDataEco2.add(controllerData.getDataEco2().get(i));
+            }
+
+            Collections.reverse(finalDataEco2);
+            controllerData.setDataEco2(finalDataEco2);
+
+            data.add(controllerData);
+
+        }
+
+
+        return data;
+
+    }
+
+    /**
+     * Subscribe a user to a controller.
+     * @param userId Id of the user.
+     * @param controllerId Id of the controller.
+     * @return true if successful.
+     * @throws StoreException
+     * @throws DuplicateException
+     */
     @GetMapping(value = "/user.{userId}.subscribeTo.{controllerId}")
     public boolean subscribeToController(@PathVariable long userId, @PathVariable long controllerId) throws StoreException, DuplicateException {
 
@@ -77,6 +151,13 @@ public class Controller {
 
     }
 
+    /**
+     * Unsubscribe user from controller.
+     * @param userId Id of the user.
+     * @param controllerId Id of the controller.
+     * @return true if successful.
+     * @throws StoreException
+     */
     @GetMapping(value = "/user.{userId}.unsubscribeFrom.{controllerId}")
     public boolean unsubscribeFromController(@PathVariable long userId, @PathVariable long controllerId) throws StoreException {
 
@@ -84,6 +165,12 @@ public class Controller {
 
     }
 
+    /**
+     * Get all controllers with the information if the user is already subscribed to them.
+     * @param userId Id of the user.
+     * @return List of all Controllers.
+     * @throws FetchException
+     */
     @GetMapping(value = "/controller.{userId}")
     public List<ControllerSubscription> getAllControllers(@PathVariable long userId) throws FetchException {
 
@@ -93,8 +180,15 @@ public class Controller {
 
     }
 
+    /**
+     * Register a new controller.
+     * @param controllerEsp Object of the new controller.
+     * @return Newly generated objectId.
+     * @throws StoreException
+     * @throws DuplicateException
+     */
     @PostMapping(value = "/controller.register")
-    public int registerController(@RequestBody ControllerEsp controllerEsp) throws StoreException, DuplicateException {
+    public long registerController(@RequestBody ControllerEsp controllerEsp) throws StoreException, DuplicateException {
 
         return controllerEsp.register(this.service.getConnection());
     }

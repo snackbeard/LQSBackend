@@ -29,7 +29,27 @@ public class ControllerEsp {
         this.name = name;
     }
 
-    public int register(Connection connection) throws StoreException, DuplicateException {
+    public static List<Long> getSubscribed(Connection connection, long userId) throws FetchException {
+        String sql = "SELECT controllerId FROM User_Controller WHERE userId = ?";
+
+        ArrayList<Long> list = new ArrayList<Long>();
+
+        try {
+            PreparedStatement prep = connection.prepareStatement(sql);
+            prep.setLong(1, userId);
+            ResultSet resultSet = prep.executeQuery();
+            while (resultSet.next()) {
+                list.add(resultSet.getLong(1));
+            }
+
+            return list;
+
+        } catch (SQLException e) {
+            throw new FetchException("Fehler beim Laden der Sensordaten!");
+        }
+    }
+
+    public long register(Connection connection) throws StoreException, DuplicateException {
 
         String getControllerSql = "SELECT * FROM Controller where name = ?";
 
@@ -55,11 +75,11 @@ public class ControllerEsp {
 
             prep.executeUpdate();
 
+            return this.objectId;
+
         } catch (SQLException e) {
             throw new StoreException(e.getMessage());
         }
-
-        return 1;
     }
 
     public static List<ControllerSubscription> getAll(Connection connection, long userId) throws FetchException {
