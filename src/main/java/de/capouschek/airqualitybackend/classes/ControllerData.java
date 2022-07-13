@@ -14,12 +14,10 @@ public class ControllerData {
         this.name = name;
     }
 
-    // TODO: Remove after real values are implemented
     public void setDataTvoc(List<QualityObject> list) {
         this.dataTvoc = list;
     }
 
-    // TODO: remove after real values are implemented
     public void setDataEco2(List<QualityObject> list) {
         this.dataEco2 = list;
     }

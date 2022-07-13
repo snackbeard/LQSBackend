@@ -96,38 +96,66 @@ public class Controller {
      * Get data of controllers subscribed by user.
      * @param userId Id of the requesting user.
      * @param eco2b Old values from eco2.
-     * @param tvocsb Old values from tvoc.
+     * @param backwards Old values from tvoc.
      * @return List of the controllers with the values.
      * @throws FetchException
      */
-    @GetMapping(value = "/user.{userId}.fetchData.{eco2b}.{tvocsb}")
-    public List<ControllerData> fetchData(@PathVariable long userId, @PathVariable int eco2b, @PathVariable int tvocsb) throws FetchException {
+    @GetMapping(value = "/user.{userId}.fetchDataTvoc.{backwards}")
+    public List<ControllerSingleData> fetchDataTvoc(@PathVariable long userId, @PathVariable int backwards) throws FetchException {
 
-        List<ControllerData> data = new ArrayList<>();
+        System.out.println("fetchData for tvoc : " + userId + " | backwards: " + backwards);
+
+        List<ControllerSingleData> data = new ArrayList<>();
 
         List<Long> subscribedControllerIds = ControllerEsp.getSubscribed(this.service.getConnection(), userId);
 
         for (Long subscribedControllerId : subscribedControllerIds) {
 
             ControllerData controllerData = this.controllerDataMap.get(subscribedControllerId);
-            List<QualityObject> finalDataTvco = new ArrayList<>();
-            List<QualityObject> finalDataEco2 = new ArrayList<>();
 
-            for (int i = controllerData.getDataTvoc().size() - 1; i > controllerData.getDataTvoc().size() - 1 - tvocsb; i--) {
+            ControllerSingleData fetchData = new ControllerSingleData(this.controllerDataMap.get(subscribedControllerId).getName());
+            List<QualityObject> finalDataTvco = new ArrayList<>();
+
+            for (int i = controllerData.getDataTvoc().size() - 1; i > controllerData.getDataTvoc().size() - 1 - backwards; i--) {
                 finalDataTvco.add(controllerData.getDataTvoc().get(i));
             }
 
             Collections.reverse(finalDataTvco);
-            controllerData.setDataTvoc(finalDataTvco);
+            fetchData.setData(finalDataTvco);
 
-            for (int i = controllerData.getDataEco2().size() - 1; i > controllerData.getDataEco2().size() - 1 - eco2b; i--) {
+            data.add(fetchData);
+
+        }
+
+
+        return data;
+
+    }
+
+    @GetMapping(value = "/user.{userId}.fetchDataEco2.{backwards}")
+    public List<ControllerSingleData> fetchDataEco2(@PathVariable long userId, @PathVariable int backwards) throws FetchException {
+
+        System.out.println("fetchData for eco2: " + userId + " | backwards: " + backwards);
+
+        List<ControllerSingleData> data = new ArrayList<>();
+
+        List<Long> subscribedControllerIds = ControllerEsp.getSubscribed(this.service.getConnection(), userId);
+
+        for (Long subscribedControllerId : subscribedControllerIds) {
+
+            ControllerData controllerData = this.controllerDataMap.get(subscribedControllerId);
+
+            ControllerSingleData fetchData = new ControllerSingleData(this.controllerDataMap.get(subscribedControllerId).getName());
+            List<QualityObject> finalDataEco2 = new ArrayList<>();
+
+            for (int i = controllerData.getDataEco2().size() - 1; i > controllerData.getDataEco2().size() - 1 - backwards; i--) {
                 finalDataEco2.add(controllerData.getDataEco2().get(i));
             }
 
             Collections.reverse(finalDataEco2);
-            controllerData.setDataEco2(finalDataEco2);
+            fetchData.setData(finalDataEco2);
 
-            data.add(controllerData);
+            data.add(fetchData);
 
         }
 
