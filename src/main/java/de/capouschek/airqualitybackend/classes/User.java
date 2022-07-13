@@ -95,7 +95,7 @@ public class User {
     public static boolean subscribeToController(Connection connection, long userId, long controllerId) throws StoreException, DuplicateException {
 
         String sqlGet = "SELECT * FROM User_Controller WHERE userId = ? AND controllerId = ?";
-        String sql = "INSERT INTO User_Controller (userId, controllerId) VALUES (?, ?)";
+        String sql = "INSERT INTO User_Controller (userId, color, controllerId) VALUES (?, ?, ?)";
 
         try {
             PreparedStatement prepGet = connection.prepareStatement(sqlGet);
@@ -108,7 +108,8 @@ public class User {
 
             PreparedStatement prep = connection.prepareStatement(sql);
             prep.setLong(1, userId);
-            prep.setLong(2, controllerId);
+            prep.setString(2, "0xff64b5f6"); // default color
+            prep.setLong(3, controllerId);
             prep.executeUpdate();
 
         } catch (SQLException e) {

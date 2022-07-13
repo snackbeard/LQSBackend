@@ -94,10 +94,9 @@ public class Controller {
 
     /**
      * Get data of controllers subscribed by user.
-     * @param userId Id of the requesting user.
-     * @param eco2b Old values from eco2.
-     * @param backwards Old values from tvoc.
-     * @return List of the controllers with the values.
+     * @param userId Id of the user.
+     * @param backwards Amount of old values.
+     * @return List of Data.
      * @throws FetchException
      */
     @GetMapping(value = "/user.{userId}.fetchDataTvoc.{backwards}")
@@ -107,13 +106,13 @@ public class Controller {
 
         List<ControllerSingleData> data = new ArrayList<>();
 
-        List<Long> subscribedControllerIds = ControllerEsp.getSubscribed(this.service.getConnection(), userId);
+        List<ControllerColorId> subscribedControllerIds = ControllerEsp.getSubscribed(this.service.getConnection(), userId);
 
-        for (Long subscribedControllerId : subscribedControllerIds) {
+        for (ControllerColorId subscribedControllerId : subscribedControllerIds) {
 
-            ControllerData controllerData = this.controllerDataMap.get(subscribedControllerId);
+            ControllerData controllerData = this.controllerDataMap.get(subscribedControllerId.getObjectId());
 
-            ControllerSingleData fetchData = new ControllerSingleData(this.controllerDataMap.get(subscribedControllerId).getName());
+            ControllerSingleData fetchData = new ControllerSingleData(this.controllerDataMap.get(subscribedControllerId.getObjectId()).getName(), subscribedControllerId.getColor());
             List<QualityObject> finalDataTvco = new ArrayList<>();
 
             for (int i = controllerData.getDataTvoc().size() - 1; i > controllerData.getDataTvoc().size() - 1 - backwards; i--) {
@@ -132,6 +131,13 @@ public class Controller {
 
     }
 
+    /**
+     * Get data of controllers subscribed by user.
+     * @param userId Id of the user.
+     * @param backwards Amount of old values.
+     * @return List of Data.
+     * @throws FetchException
+     */
     @GetMapping(value = "/user.{userId}.fetchDataEco2.{backwards}")
     public List<ControllerSingleData> fetchDataEco2(@PathVariable long userId, @PathVariable int backwards) throws FetchException {
 
@@ -139,13 +145,13 @@ public class Controller {
 
         List<ControllerSingleData> data = new ArrayList<>();
 
-        List<Long> subscribedControllerIds = ControllerEsp.getSubscribed(this.service.getConnection(), userId);
+        List<ControllerColorId> subscribedControllerIds = ControllerEsp.getSubscribed(this.service.getConnection(), userId);
 
-        for (Long subscribedControllerId : subscribedControllerIds) {
+        for (ControllerColorId subscribedControllerId : subscribedControllerIds) {
 
-            ControllerData controllerData = this.controllerDataMap.get(subscribedControllerId);
+            ControllerData controllerData = this.controllerDataMap.get(subscribedControllerId.getObjectId());
 
-            ControllerSingleData fetchData = new ControllerSingleData(this.controllerDataMap.get(subscribedControllerId).getName());
+            ControllerSingleData fetchData = new ControllerSingleData(this.controllerDataMap.get(subscribedControllerId.getObjectId()).getName(), subscribedControllerId.getColor());
             List<QualityObject> finalDataEco2 = new ArrayList<>();
 
             for (int i = controllerData.getDataEco2().size() - 1; i > controllerData.getDataEco2().size() - 1 - backwards; i--) {
@@ -193,6 +199,11 @@ public class Controller {
 
     }
 
+    @PostMapping(value = "/user.{userId}.changeColorOf.{controllerId}")
+    public boolean changeControllerColor(@PathVariable long userId, @PathVariable long controllerId, @RequestBody ColorObject color) throws StoreException {
+        return ControllerEsp.changeColor(this.service.getConnection(), userId, controllerId, color);
+    }
+
     /**
      * Get all controllers with the information if the user is already subscribed to them.
      * @param userId Id of the user.
@@ -219,59 +230,6 @@ public class Controller {
     public long registerController(@RequestBody ControllerEsp controllerEsp) throws StoreException, DuplicateException {
 
         return controllerEsp.register(this.service.getConnection());
-    }
-
-
-
-
-
-
-
-    @GetMapping("/gettvocs.{backwards}")
-    // TODO: später dann überprüfen, ob es lower/upper überhaupt schon gibt und entsprechend daten zurückgeben
-    public List<QualityObject> getTvocs(@PathVariable int backwards) {
-
-        if (tvocs.isEmpty()) {
-            tvocs = generateValues(96, 100, 110);
-        }
-
-        List<QualityObject> finalList = new ArrayList();
-
-
-        for (int i = tvocs.size() - 1; i > tvocs.size() - 1 - backwards; i--) {
-            finalList.add(tvocs.get(i));
-        }
-
-
-        System.out.println("retrived tvocs back to " + (tvocs.size() -backwards) + ": " + countTvocs);
-        this.countTvocs++;
-
-        Collections.reverse(finalList);
-
-        return finalList;
-
-    }
-
-    @GetMapping("/geteco2.{backwards}")
-    // TODO: später dann überprüfen, ob es lower/upper überhaupt schon gibt und entsprechend daten zurückgeben
-    public List<QualityObject> getEco2(@PathVariable int backwards) {
-
-        if (eco2.isEmpty()) {
-            eco2 = generateValues(96, 200, 210);
-        }
-
-        List<QualityObject> finalList = new ArrayList<>();
-
-        for (int i = eco2.size() - 1; i > eco2.size() - 1 - backwards; i--) {
-            finalList.add(eco2.get(i));
-        }
-
-        System.out.println("retrived eco2 back to " + (eco2.size() - backwards) + ": " + countEco2);
-        this.countEco2++;
-
-        Collections.reverse(finalList);
-
-        return finalList;
     }
 
     private List<QualityObject> generateValues(int amount, int rangeLower, int rangeUpper) {

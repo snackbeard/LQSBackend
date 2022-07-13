@@ -19,7 +19,7 @@ public class ControllerEsp {
     private long objectId;
     private String name;
 
-    public ControllerEsp(){};
+    public ControllerEsp(){}
 
     public ControllerEsp(String name) {
         if (name == null || name.equals("") || !(name.trim().equals(name))) {
@@ -29,17 +29,17 @@ public class ControllerEsp {
         this.name = name;
     }
 
-    public static List<Long> getSubscribed(Connection connection, long userId) throws FetchException {
-        String sql = "SELECT controllerId FROM User_Controller WHERE userId = ?";
+    public static List<ControllerColorId> getSubscribed(Connection connection, long userId) throws FetchException {
+        String sql = "SELECT controllerId, color FROM User_Controller WHERE userId = ?";
 
-        ArrayList<Long> list = new ArrayList<Long>();
+        ArrayList<ControllerColorId> list = new ArrayList<>();
 
         try {
             PreparedStatement prep = connection.prepareStatement(sql);
             prep.setLong(1, userId);
             ResultSet resultSet = prep.executeQuery();
             while (resultSet.next()) {
-                list.add(resultSet.getLong(1));
+                list.add(new ControllerColorId(resultSet.getLong(1), resultSet.getString(2)));
             }
 
             return list;
@@ -86,7 +86,7 @@ public class ControllerEsp {
 
         List<ControllerSubscription> all = new ArrayList<>();
 
-        String sqlGetSubscribed = "SELECT User_Controller.controllerId, Controller.name FROM User_Controller\n" +
+        String sqlGetSubscribed = "SELECT User_Controller.controllerId, User_Controller.color, Controller.name FROM User_Controller\n" +
                 "LEFT OUTER JOIN Controller ON User_Controller.controllerId = Controller.ID\n" +
                 "WHERE User_Controller.userId = ?";
 
@@ -102,9 +102,9 @@ public class ControllerEsp {
             while (rs1.next()) {
                 ControllerEsp tempesp = new ControllerEsp();
                 tempesp.setObjectId(rs1.getLong(1));
-                tempesp.setName(rs1.getString(2));
+                tempesp.setName(rs1.getString(3));
 
-                all.add(new ControllerSubscription(true, tempesp));
+                all.add(new ControllerSubscription(true, tempesp, rs1.getString(2)));
             }
             rs1.close();
 
@@ -116,7 +116,7 @@ public class ControllerEsp {
                 tempesp.setObjectId(rs2.getLong(1));
                 tempesp.setName(rs2.getString(2));
 
-                all.add(new ControllerSubscription(false, tempesp));
+                all.add(new ControllerSubscription(false, tempesp, "0x00000000"));
             }
             rs2.close();
 
@@ -129,6 +129,26 @@ public class ControllerEsp {
         }
 
 
+    }
+
+    public static boolean changeColor(Connection connection, long userId, long controllerId, ColorObject color) throws StoreException {
+        String sql = "UPDATE User_Controller\n" +
+                "SET color = ?\n" +
+                "WHERE userId = ?\n" +
+                "AND controllerId = ?";
+
+        try {
+            PreparedStatement prep = connection.prepareStatement(sql);
+            prep.setString(1, color.getColor());
+            prep.setLong(2, userId);
+            prep.setLong(3, controllerId);
+            prep.executeUpdate();
+
+            return true;
+
+        } catch (SQLException e) {
+            throw new StoreException("Fehler beim Speichern der Farbe");
+        }
     }
 
     public void setObjectId(long objectId) {

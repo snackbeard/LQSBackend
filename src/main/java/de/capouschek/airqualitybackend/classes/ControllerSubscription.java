@@ -4,13 +4,18 @@ public class ControllerSubscription {
 
     private boolean isSubscribed;
     private ControllerEsp controller;
-    // private int color;
+    private String color;
 
     public ControllerSubscription() {};
 
-    public ControllerSubscription(boolean isSubscribed, ControllerEsp controller) {
+    public ControllerSubscription(boolean isSubscribed, ControllerEsp controller, String color) {
         this.isSubscribed = isSubscribed;
         this.controller = controller;
+        this.color = color;
+    }
+
+    public String getColor() {
+        return this.color;
     }
 
     public boolean getIsSubscribed() {

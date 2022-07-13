@@ -5,6 +5,7 @@ import java.util.List;
 
 public class ControllerData {
     private String name;
+    private String color;
     private List<QualityObject> dataTvoc;
     private List<QualityObject> dataEco2;
 
