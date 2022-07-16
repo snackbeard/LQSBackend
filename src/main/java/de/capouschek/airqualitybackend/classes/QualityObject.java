@@ -1,7 +1,5 @@
 package de.capouschek.airqualitybackend.classes;
 
-import java.time.LocalDateTime;
-
 public class QualityObject {
 
     private double value;

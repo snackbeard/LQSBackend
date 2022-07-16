@@ -49,8 +49,8 @@ public class Controller {
                         .put(id, new ControllerData(resultSet.getString(2)));
 
                 // TODO: remove fake Data
-                this.controllerDataMap.get(id).setDataEco2(generateValues(96, 200, 210));
-                this.controllerDataMap.get(id).setDataTvoc(generateValues(96, 100, 110));
+                // this.controllerDataMap.get(id).setDataEco2(generateValues(96, 200, 210));
+                // this.controllerDataMap.get(id).setDataTvoc(generateValues(96, 100, 110));
 
 
             }
@@ -113,14 +113,18 @@ public class Controller {
             ControllerData controllerData = this.controllerDataMap.get(subscribedControllerId.getObjectId());
 
             ControllerSingleData fetchData = new ControllerSingleData(this.controllerDataMap.get(subscribedControllerId.getObjectId()).getName(), subscribedControllerId.getColor());
-            List<QualityObject> finalDataTvco = new ArrayList<>();
+            List<QualityObject> finalDataTvoc = new ArrayList<>();
 
-            for (int i = controllerData.getDataTvoc().size() - 1; i > controllerData.getDataTvoc().size() - 1 - backwards; i--) {
-                finalDataTvco.add(controllerData.getDataTvoc().get(i));
+            if (controllerData.getDataTvoc().size() < backwards) {
+                backwards = controllerData.getDataTvoc().size();
             }
 
-            Collections.reverse(finalDataTvco);
-            fetchData.setData(finalDataTvco);
+            for (int i = controllerData.getDataTvoc().size() - 1; i > controllerData.getDataTvoc().size() - 1 - backwards; i--) {
+                finalDataTvoc.add(controllerData.getDataTvoc().get(i));
+            }
+
+            Collections.reverse(finalDataTvoc);
+            fetchData.setData(finalDataTvoc);
 
             data.add(fetchData);
 
@@ -153,6 +157,10 @@ public class Controller {
 
             ControllerSingleData fetchData = new ControllerSingleData(this.controllerDataMap.get(subscribedControllerId.getObjectId()).getName(), subscribedControllerId.getColor());
             List<QualityObject> finalDataEco2 = new ArrayList<>();
+
+            if (controllerData.getDataEco2().size() < backwards) {
+                backwards = controllerData.getDataEco2().size();
+            }
 
             for (int i = controllerData.getDataEco2().size() - 1; i > controllerData.getDataEco2().size() - 1 - backwards; i--) {
                 finalDataEco2.add(controllerData.getDataEco2().get(i));
@@ -227,9 +235,52 @@ public class Controller {
      * @throws DuplicateException
      */
     @PostMapping(value = "/controller.register")
-    public long registerController(@RequestBody ControllerEsp controllerEsp) throws StoreException, DuplicateException {
+    public long registerController(@RequestBody ControllerEsp controllerEsp) throws StoreException {
 
         return controllerEsp.register(this.service.getConnection());
+    }
+
+    @PostMapping(value = "/controller.sendDataEco2")
+    public void recieveDataEco2(@RequestBody SensorData sensorData) {
+        if (this.controllerDataMap.get(sensorData.getControllerId()).getDataEco2().size() == 96) {
+            this.controllerDataMap.get(sensorData.getControllerId()).getDataEco2().remove(0);
+        }
+
+        this.controllerDataMap
+                .get(sensorData.getControllerId()).getDataEco2()
+                .add(new QualityObject(sensorData.getValue(), getTimeNowAsString()));
+
+    }
+
+    @PostMapping(value = "/controller.sendDataTvoc")
+    public void recieveDataTvoc(@RequestBody SensorData sensorData) {
+        if (this.controllerDataMap.get(sensorData.getControllerId()).getDataTvoc().size() == 96) {
+            this.controllerDataMap.get(sensorData.getControllerId()).getDataTvoc().remove(0);
+        }
+
+        System.out.println("new tvoc data: " + sensorData.getControllerId() + " | " + sensorData.getValue());
+
+        this.controllerDataMap
+                .get(sensorData.getControllerId()).getDataTvoc().add(new QualityObject(sensorData.getValue(), getTimeNowAsString()));
+    }
+
+    private String getTimeNowAsString() {
+        LocalDateTime local = LocalDateTime.now();
+        int hour = local.getHour();
+        int minute = local.getMinute();
+
+        String hourS = "" + hour;
+        String minuteS = "" + minute;
+
+        if (hour < 10) {
+            hourS = "0" + hour;
+        }
+
+        if (minute < 10) {
+            minuteS = "0" + minute;
+        }
+
+        return "" + hourS + ":" + minuteS;
     }
 
     private List<QualityObject> generateValues(int amount, int rangeLower, int rangeUpper) {

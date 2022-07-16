@@ -49,7 +49,7 @@ public class ControllerEsp {
         }
     }
 
-    public long register(Connection connection) throws StoreException, DuplicateException {
+    public long register(Connection connection) throws StoreException {
 
         String getControllerSql = "SELECT * FROM Controller where name = ?";
 
@@ -60,7 +60,8 @@ public class ControllerEsp {
 
             ResultSet resultSet = prepGet.executeQuery();
             while (resultSet.next()) {
-                throw new DuplicateException("Controller with name " + this.name + " already exists");
+                System.out.println("Known controller tried to register, returned id: " + resultSet.getLong(1));
+                return resultSet.getLong(1);
             }
             resultSet.close();
 
@@ -74,6 +75,8 @@ public class ControllerEsp {
             prep.setString(2, this.name);
 
             prep.executeUpdate();
+
+            System.out.println("New controlle registered with id: " + this.objectId);
 
             return this.objectId;
 
