@@ -5,7 +5,6 @@ import de.capouschek.airqualitybackend.exceptions.*;
 import de.capouschek.airqualitybackend.infrastructure.DBService;
 import org.springframework.web.bind.annotation.*;
 
-import javax.websocket.server.PathParam;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -237,7 +236,10 @@ public class Controller {
     @PostMapping(value = "/controller.register")
     public long registerController(@RequestBody ControllerEsp controllerEsp) throws StoreException {
 
-        return controllerEsp.register(this.service.getConnection());
+        System.out.println("controller registration: " + controllerEsp.getName());
+        long cId = controllerEsp.register(this.service.getConnection());
+        this.controllerDataMap.put(controllerEsp.getObjectId(), new ControllerData(controllerEsp.getName()));
+        return cId;
     }
 
     @PostMapping(value = "/controller.sendDataEco2")
@@ -245,6 +247,8 @@ public class Controller {
         if (this.controllerDataMap.get(sensorData.getControllerId()).getDataEco2().size() == 96) {
             this.controllerDataMap.get(sensorData.getControllerId()).getDataEco2().remove(0);
         }
+
+        System.out.println("new eco2 data: " + sensorData.getControllerId() + " | " + sensorData.getValue());
 
         this.controllerDataMap
                 .get(sensorData.getControllerId()).getDataEco2()
